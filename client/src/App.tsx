@@ -13,7 +13,8 @@ export default function App() {
     const controller = new AbortController();
     fetch('/api/health', { signal: controller.signal })
       .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        // 503 = server vivo pero DB caida: igual trae el cuerpo con el detalle
+        if (!res.ok && res.status !== 503) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
       .then((json) => setApi({ kind: 'ok', data: healthResponseSchema.parse(json) }))
@@ -59,9 +60,14 @@ export default function App() {
           <h2 className="mb-2 text-lg font-semibold">Estado de la API</h2>
           {api.kind === 'loading' && <p className="text-ink-muted">Conectando con el server...</p>}
           {api.kind === 'ok' && (
-            <p className="text-brand-700">
-              Conectado a <strong>{api.data.service}</strong> · uptime {api.data.uptimeSeconds}s
-            </p>
+            <div className="flex flex-col gap-1">
+              <p className="text-brand-700">
+                Conectado a <strong>{api.data.service}</strong> · uptime {api.data.uptimeSeconds}s
+              </p>
+              <p className={api.data.database === 'ok' ? 'text-brand-700' : 'text-accent-700'}>
+                Base de datos: {api.data.database === 'ok' ? 'conectada' : 'sin conexión'}
+              </p>
+            </div>
           )}
           {api.kind === 'error' && (
             <p className="text-accent-700">No se pudo conectar ({api.message}).</p>

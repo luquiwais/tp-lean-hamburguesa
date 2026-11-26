@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // Valida las variables de entorno al arrancar. Si falta algo obligatorio,
 // el proceso termina con un mensaje claro en vez de fallar mas tarde.
-// Las de Supabase y JWT son opcionales por ahora; pasan a obligatorias en Fase 1 y 3.
+// Las de JWT son opcionales hasta la Fase 3.
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().max(65535).default(4000),
@@ -15,11 +15,8 @@ const envSchema = z.object({
         .map((origin) => origin.trim())
         .filter(Boolean),
     ),
-  SUPABASE_URL: z
-    .url()
-    .optional()
-    .or(z.literal('').transform(() => undefined)),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  SUPABASE_URL: z.url({ protocol: /^https$/ }),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(20),
   JWT_ACCESS_SECRET: z.string().optional(),
   JWT_REFRESH_SECRET: z.string().optional(),
 });

@@ -5,6 +5,7 @@ import { z } from 'zod';
 export const healthResponseSchema = z.object({
   status: z.literal('ok'),
   service: z.string(),
+  database: z.enum(['ok', 'error']),
   uptimeSeconds: z.number().nonnegative(),
   timestamp: z.string(),
 });

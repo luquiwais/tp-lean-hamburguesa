@@ -118,7 +118,7 @@ Schemas Zod (producto, payload del pedido, auth) y tipos inferidos, usados por l
 ## Fases (cada una se revisa antes de seguir)
 
 0. [HECHO] `docs/prompts.md`, scaffolding del monorepo, ESLint/Prettier, `.env.example`, `.gitignore` (incluye `.env` y memoria).
-1. Supabase: migraciones SQL (`supabase/migrations/*.sql`), seed (unas 15 hamburguesas, combos, papas, bebidas, grupos de modificadores, un usuario admin), bucket `products`.
+1. [HECHO] Supabase vía CLI (`npx supabase db push --remote --include-seed`): migraciones (schema + funciones `create_order` / `change_order_status`), seed (19 productos, 8 grupos, 30 modificadores, 2 cupones), bucket `products`, RLS verificado con la key pública. El admin se crea en Fase 3 con `npm run create-admin -w server` (bcrypt en el backend).
 2. Backend base: logger, errores, catálogo público (GET de categorías y productos con sus grupos).
 3. Auth: registro, login, refresh, logout, me; middlewares.
 4. Frontend base: tokens de diseño, layout, menú, personalizador, carrito.
