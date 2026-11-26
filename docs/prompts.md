@@ -69,6 +69,9 @@ Registro textual de los prompts usados durante el desarrollo del TP.
 ## Prompt 21
 > dale mandale con el 6
 
+## Prompt 22
+> dale hace el 8 y dsp vamos con el deploy
+
 ## Decisiones tomadas por cuestionario
 - Auth: navegar como invitado, login al confirmar el pedido.
 - Tokens: access token en memoria + refresh token en cookie httpOnly con rotación.

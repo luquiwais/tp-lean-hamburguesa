@@ -22,6 +22,7 @@ export const traceId: RequestHandler = (req, res, next) => {
       method: req.method,
       path: req.originalUrl,
       status: res.statusCode,
+      ip: req.ip,
       duration_ms: Math.round(durationMs),
     });
   });

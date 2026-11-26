@@ -1,0 +1,36 @@
+# Blueprint de Render para el back (Express). Render > New > Blueprint > este repo.
+# Los secretos de Supabase se cargan a mano en el panel (sync: false): nunca van al repo.
+services:
+  - type: web
+    name: tp-lean-hamburguesa-api
+    runtime: node
+    plan: free
+    # Elegir la region mas cercana a la de Supabase (menos latencia por consulta)
+    region: virginia
+    branch: main
+    # --include=dev: tsup (devDependency) hace el build aunque NODE_ENV=production
+    buildCommand: npm ci --include=dev && npm run build -w server
+    startCommand: npm start -w server
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: '22'
+      # Vercel (rewrite) + proxy de Render
+      - key: TRUST_PROXY
+        value: '2'
+      - key: COOKIE_SAMESITE
+        value: lax
+      - key: CORS_ORIGINS
+        sync: false # URL del front en Vercel, ej: https://tp-lean-hamburguesa.vercel.app
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Render genera valores aleatorios: nadie los ve ni los copia
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true

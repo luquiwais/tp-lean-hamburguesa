@@ -24,6 +24,10 @@ const envSchema = z.object({
   // 'lax' en local (front y back en el mismo sitio via proxy de Vite).
   // En el deploy Vercel + Render son sitios distintos: usar 'none' (exige HTTPS).
   COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
+  // Cantidad de proxies delante del server (para que req.ip sea la IP real del
+  // cliente y el rate limit no agrupe a todos bajo la IP del proxy).
+  // Local: 0 o 1. Deploy (Vercel rewrite -> Render): 2.
+  TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(1),
 });
 
 const parsed = envSchema.safeParse(process.env);

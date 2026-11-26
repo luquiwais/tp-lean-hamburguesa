@@ -13,7 +13,7 @@ export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
-  app.set('trust proxy', 1); // detras del proxy de Render, para rate limit por IP real
+  app.set('trust proxy', env.TRUST_PROXY); // IP real del cliente detras de Vercel/Render
 
   app.use(traceId);
   app.use(helmet());
