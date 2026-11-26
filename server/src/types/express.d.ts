@@ -6,6 +6,12 @@ declare global {
     interface Request {
       traceId: string;
       log: Logger;
+      // Datos ya validados por el middleware validate()
+      valid: {
+        params?: unknown;
+        query?: unknown;
+        body?: unknown;
+      };
     }
   }
 }

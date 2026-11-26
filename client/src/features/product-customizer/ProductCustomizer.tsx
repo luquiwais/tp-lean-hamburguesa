@@ -7,10 +7,9 @@ import {
   defaultSelections,
   unitPrice,
   validateSelections,
-  type ModifierGroup,
-  type Product,
   type Selection,
 } from '@burger/shared';
+import type { ModifierGroup, Product } from '@/lib/catalogContract';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

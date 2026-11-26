@@ -1,7 +1,8 @@
 import { Link } from 'react-router';
 import { Plus } from 'lucide-react';
 import { cn } from 'cn';
-import { defaultSelections, type Product } from '@burger/shared';
+import { defaultSelections } from '@burger/shared';
+import type { Product } from '@/lib/catalogContract';
 import { BadgePill } from '@/components/BadgePill';
 import { ProductImage } from '@/components/ProductImage';
 import { formatARS } from '@/lib/format';

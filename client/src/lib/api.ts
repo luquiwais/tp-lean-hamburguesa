@@ -1,4 +1,4 @@
-import { categorySchema, productSchema, storeSettingsSchema } from '@burger/shared';
+import { categorySchema, productSchema, storeSettingsSchema } from '@/lib/catalogContract';
 import * as mock from '@/mocks/catalog';
 
 export class ApiError extends Error {

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Bike, Clock, ShoppingBag } from 'lucide-react';
 import { cn } from 'cn';
-import type { StoreSettings } from '@burger/shared';
+import type { StoreSettings } from '@/lib/catalogContract';
 import { formatARS } from '@/lib/format';
 
 type Props = { store: StoreSettings; imageUrl: string | null };

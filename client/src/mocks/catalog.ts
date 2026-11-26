@@ -1,4 +1,4 @@
-import type { Category, ProductInput, StoreSettingsInput } from '@burger/shared';
+import type { Category, ProductInput, StoreSettingsInput } from '@/lib/catalogContract';
 
 // Catálogo de ejemplo con la forma exacta del contrato (shared/src/schemas/catalog.ts).
 // Se usa hasta que el back sirva el catálogo real y sirve de base para el seed (Fase 1).

@@ -1,17 +1,42 @@
-import type { Product } from './schemas/catalog';
-
 // Reglas de personalización y precio de un ítem. Las usa el front para el
 // personalizador y el carrito, y el back (Fase 5) para recalcular el pedido
 // con los datos de la DB: así los dos lados nunca discrepan.
 
 export const MAX_ITEM_QUANTITY = 20;
 
+// Forma minima que necesitan las reglas: la cumplen ProductDetail (GET
+// /api/products/:slug) y lo que el back arma desde la DB en POST /orders.
+export interface PricedModifier {
+  id: string;
+  name: string;
+  priceDelta: number;
+  maxQuantity: number;
+  isDefault: boolean;
+  isAvailable: boolean;
+}
+
+export interface PricedModifierGroup {
+  id: string;
+  name: string;
+  minSelect: number;
+  maxSelect: number;
+  modifiers: PricedModifier[];
+}
+
+export interface PricedProduct {
+  basePrice: number;
+  modifierGroups: PricedModifierGroup[];
+}
+
 export type Selection = { modifierId: string; quantity: number };
 
 export type SelectionIssue = { groupId: string | null; message: string };
 
 // Devuelve los problemas de una personalización; vacío = válida.
-export function validateSelections(product: Product, selections: Selection[]): SelectionIssue[] {
+export function validateSelections(
+  product: PricedProduct,
+  selections: Selection[],
+): SelectionIssue[] {
   const issues: SelectionIssue[] = [];
   const owner = new Map(
     product.modifierGroups.flatMap((g) =>
@@ -66,7 +91,7 @@ export function validateSelections(product: Product, selections: Selection[]): S
 }
 
 // Selección inicial: los modificadores marcados por defecto y disponibles.
-export const defaultSelections = (product: Product): Selection[] =>
+export const defaultSelections = (product: PricedProduct): Selection[] =>
   product.modifierGroups.flatMap((g) =>
     g.modifiers
       .filter((m) => m.isDefault && m.isAvailable)
@@ -75,7 +100,7 @@ export const defaultSelections = (product: Product): Selection[] =>
 
 // Precio unitario: base + suma de los modificadores elegidos (por cantidad).
 // Ignora ids desconocidos; validateSelections es quien los rechaza.
-export function unitPrice(product: Product, selections: Selection[]): number {
+export function unitPrice(product: PricedProduct, selections: Selection[]): number {
   const delta = new Map(
     product.modifierGroups.flatMap((g) => g.modifiers.map((m) => [m.id, m.priceDelta])),
   );

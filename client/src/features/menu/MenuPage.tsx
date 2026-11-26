@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link, Outlet } from 'react-router';
 import { Hamburger } from 'lucide-react';
-import type { Category, Product, StoreSettings } from '@burger/shared';
+import type { Category, Product, StoreSettings } from '@/lib/catalogContract';
 import { Button } from '@/components/ui/button';
 import { CartBar } from '@/features/cart/CartBar';
 import { useCartSummary } from '@/features/cart/useCartSummary';

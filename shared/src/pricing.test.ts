@@ -1,20 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { productSchema } from './schemas/catalog';
-import { unitPrice, validateSelections } from './pricing';
+import { unitPrice, validateSelections, type PricedProduct } from './pricing';
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
-const burger = productSchema.parse({
-  id: id(1),
-  categoryId: id(2),
-  name: 'Clásica',
-  slug: 'clasica',
-  description: '',
+const burger: PricedProduct = {
   basePrice: 10000,
-  imageUrl: null,
-  type: 'simple',
-  badges: [],
-  isAvailable: true,
   modifierGroups: [
     {
       id: id(10),
@@ -22,8 +12,22 @@ const burger = productSchema.parse({
       minSelect: 1,
       maxSelect: 1,
       modifiers: [
-        { id: id(11), name: 'Simple', priceDelta: 0, isDefault: true, isAvailable: true },
-        { id: id(12), name: 'Doble', priceDelta: 3000, isDefault: false, isAvailable: true },
+        {
+          id: id(11),
+          name: 'Simple',
+          priceDelta: 0,
+          isDefault: true,
+          isAvailable: true,
+          maxQuantity: 1,
+        },
+        {
+          id: id(12),
+          name: 'Doble',
+          priceDelta: 3000,
+          isDefault: false,
+          isAvailable: true,
+          maxQuantity: 1,
+        },
       ],
     },
     {
@@ -40,12 +44,26 @@ const burger = productSchema.parse({
           isAvailable: true,
           maxQuantity: 2,
         },
-        { id: id(22), name: 'Panceta', priceDelta: 1300, isDefault: false, isAvailable: true },
-        { id: id(23), name: 'Huevo', priceDelta: 800, isDefault: false, isAvailable: false },
+        {
+          id: id(22),
+          name: 'Panceta',
+          priceDelta: 1300,
+          isDefault: false,
+          isAvailable: true,
+          maxQuantity: 1,
+        },
+        {
+          id: id(23),
+          name: 'Huevo',
+          priceDelta: 800,
+          isDefault: false,
+          isAvailable: false,
+          maxQuantity: 1,
+        },
       ],
     },
   ],
-});
+};
 
 const sel = (n: number, quantity = 1) => ({ modifierId: id(n), quantity });
 const messages = (selections: ReturnType<typeof sel>[]) =>
