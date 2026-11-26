@@ -29,3 +29,18 @@ export const refreshLimiter = rateLimit({
   windowMs: 15 * 60_000,
   limit: 60,
 });
+
+// Cotizacion del checkout (publica): se llama al editar carrito/cupon.
+export const quoteLimiter = rateLimit({
+  ...base,
+  windowMs: 15 * 60_000,
+  limit: 150,
+});
+
+// Crear pedidos: por usuario (va despues de authenticate), no por IP.
+export const orderLimiter = rateLimit({
+  ...base,
+  windowMs: 15 * 60_000,
+  limit: 10,
+  keyGenerator: (req) => `user:${req.user!.id}`,
+});

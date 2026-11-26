@@ -114,17 +114,24 @@ export const catalogService = {
       catalogRepository.findActiveProductBySlug(slug),
     );
     // Producto inexistente, dado de baja o de una categoria inactiva
-    if (!row || !row.categories?.is_active) throw notFound('Producto no encontrado');
-
-    const groups = toModifierGroups(row);
-    const { product_modifier_groups: _pmg, categories, ...base } = row;
-    return {
-      ...toSummary(
-        base,
-        groups.some((g) => g.isRequired),
-      ),
-      categorySlug: categories.slug,
-      modifierGroups: groups,
-    };
+    const detail = row ? toProductDetail(row) : null;
+    if (!detail) throw notFound('Producto no encontrado');
+    return detail;
   },
 };
+
+// Fila de la DB -> ProductDetail. null si la categoria esta inactiva.
+// Lo reusa el service de pedidos para recalcular precios.
+export function toProductDetail(row: ProductDetailRow): ProductDetail | null {
+  if (!row.categories?.is_active) return null;
+  const groups = toModifierGroups(row);
+  const { product_modifier_groups: _pmg, categories, ...base } = row;
+  return {
+    ...toSummary(
+      base,
+      groups.some((g) => g.isRequired),
+    ),
+    categorySlug: categories.slug,
+    modifierGroups: groups,
+  };
+}

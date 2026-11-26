@@ -67,6 +67,16 @@ export interface ProductDetailRow extends Omit<ProductRow, 'product_modifier_gro
 const PRODUCT_FIELDS =
   'id, category_id, slug, name, description, base_price, image_url, type, badges, sort_order, is_available';
 
+const DETAIL_SELECT = `${PRODUCT_FIELDS},
+  categories ( slug, is_active ),
+  product_modifier_groups (
+    sort_order,
+    modifier_groups (
+      id, code, name, description, min_select, max_select,
+      modifiers ( id, name, price_delta, max_quantity, is_default, is_available, sort_order )
+    )
+  )`;
+
 export const catalogRepository = {
   async getStoreSettings(): Promise<StoreSettingsRow> {
     const { data, error } = await supabase
@@ -106,21 +116,24 @@ export const catalogRepository = {
   async findActiveProductBySlug(slug: string): Promise<ProductDetailRow | null> {
     const { data, error } = await supabase
       .from('products')
-      .select(
-        `${PRODUCT_FIELDS},
-         categories ( slug, is_active ),
-         product_modifier_groups (
-           sort_order,
-           modifier_groups (
-             id, code, name, description, min_select, max_select,
-             modifiers ( id, name, price_delta, max_quantity, is_default, is_available, sort_order )
-           )
-         )`,
-      )
+      .select(DETAIL_SELECT)
       .eq('slug', slug) // supabase-js parametriza: no hay concatenacion de SQL
       .eq('is_active', true)
       .returns<ProductDetailRow[]>()
       .maybeSingle();
+    if (error) throw error;
+    return data;
+  },
+
+  // Para recalcular un pedido: trae SIEMPRE de la DB (sin cache) los
+  // productos activos pedidos con sus grupos y modificadores vigentes.
+  async findActiveProductsByIds(ids: string[]): Promise<ProductDetailRow[]> {
+    const { data, error } = await supabase
+      .from('products')
+      .select(DETAIL_SELECT)
+      .in('id', ids)
+      .eq('is_active', true)
+      .returns<ProductDetailRow[]>();
     if (error) throw error;
     return data;
   },

@@ -122,9 +122,9 @@ Schemas Zod (producto, payload del pedido, auth) y tipos inferidos, usados por l
 2. [HECHO] Backend base: `GET /api/menu` (store + categorías + productos, 1 request, caché 30 s con coalescing) y `GET /api/products/:slug` (grupos + modificadores). Middleware `validate` (Zod), `lib/cache.ts`, contratos en `shared/src/schemas/catalog.ts`, referencia para el front en `docs/api.md`.
 3. [HECHO] Auth propia: register, login, refresh con rotación y detección de reuso (revoca la familia), logout, me. bcrypt (costo 12) + JWT HS256 de 15 min + refresh opaco con HMAC en la DB y cookie httpOnly (path /api/auth). Middlewares `authenticate` y `authorize`, rate limit en login y registro, `/api/admin` protegido, script `npm run create-admin -w server`. Probado de punta a punta contra la DB.
 4. [HECHO, con catálogo mock] Frontend base: tokens de diseño, layout, menú, personalizador, carrito. Ver notas abajo.
-5. Checkout y pedidos: endpoint `POST /orders` (precio en el server + RPC), checkout, confirmación, tracker, mis pedidos.
+5. [HECHO, back] Pedidos + cupones (se unificó con la 7): `POST /api/orders/quote` (público), `POST /api/orders` (precio recalculado con `shared/pricing.ts`, mínimo de delivery, envío gratis, cupón consumido en la transacción, tarjeta simulada con Luhn y rechazo 0002), `GET /mine`, `GET /:id`, `POST /:id/cancel`, `PATCH /api/admin/orders/:id/status` con mapa de transiciones según la modalidad. Probado de punta a punta (37 casos). Front pendiente (José).
 6. Admin: CRUD, uploads, gestión de pedidos y dashboard.
-7. Extras elegidos en D9.
+7. [HECHO, back] Cupones y envío gratis: incluidos en la Fase 5 (`quote` devuelve `couponError` y `missingForFreeDelivery`).
 8. Tests y pulido: Vitest + Supertest (pricing, transiciones, auth), estados vacíos, skeletons, accesibilidad, README con decisiones y créditos de las fotos (Unsplash, Pexels, Foodiesfeed).
 9. Deploy: front en Vercel, back en Render free.
 

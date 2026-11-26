@@ -227,6 +227,146 @@ Todo `/api/admin/*` exige un token de un usuario con rol `admin`. Por ahora hay 
 
 ---
 
+## Pedidos
+
+**El back recalcula todo** desde la DB: precios, modificadores, envío, cupón y total. Del front
+solo se usan ids, cantidades, selecciones, dirección, contacto y pago. Si mandás un precio, se
+ignora. El usuario sale del token, nunca del body.
+
+Schemas: `quoteRequestSchema`, `quoteResponseSchema`, `createOrderSchema`, `orderDetailSchema`,
+`orderSummarySchema`. Helpers en `@burger/shared`: `computeOrderTotals`, `luhnCheck`,
+`detectCardBrand`, `isExpiryValid`, `nextStatusesFor`, `ORDER_TRANSITIONS`.
+
+| Método y ruta                        | Auth          | Qué hace                                                          |
+| ------------------------------------ | ------------- | ----------------------------------------------------------------- |
+| `POST /api/orders/quote`             | No (invitado) | Resumen del checkout: subtotal, envío, cupón, total. No crea nada |
+| `POST /api/orders`                   | Sí            | Crea el pedido. `201` + `OrderDetail`                             |
+| `GET /api/orders/mine`               | Sí            | `OrderSummary[]` (más nuevos primero, hasta 50)                   |
+| `GET /api/orders/:id`                | Sí (dueño)    | `OrderDetail` con ítems, modificadores e historial                |
+| `POST /api/orders/:id/cancel`        | Sí (dueño)    | Solo en `pending` o `confirmed`. Devuelve el `OrderDetail`        |
+| `PATCH /api/admin/orders/:id/status` | Admin         | `{ status, note? }`. Valida contra el mapa de transiciones        |
+| `GET /api/admin/orders/:id`          | Admin         | Igual que el detalle, con `nextStatuses` para los botones         |
+
+### `POST /api/orders/quote` (y base de `POST /api/orders`)
+
+```json
+{
+  "fulfillment": "delivery",
+  "items": [
+    {
+      "productId": "uuid",
+      "quantity": 2,
+      "selections": [{ "modifierId": "uuid", "quantity": 1 }],
+      "notes": "sin sal"
+    }
+  ],
+  "couponCode": "BIENVENIDA10"
+}
+```
+
+Respuesta:
+
+```json
+{
+  "lines": [
+    {
+      "productId": "uuid",
+      "productName": "Combo Clásica",
+      "quantity": 2,
+      "unitPrice": 18300,
+      "itemTotal": 36600
+    }
+  ],
+  "subtotal": 36600,
+  "deliveryFee": 0,
+  "discount": 3660,
+  "total": 32940,
+  "missingForMinimum": 0,
+  "missingForFreeDelivery": null,
+  "coupon": { "code": "BIENVENIDA10", "discount": 3660 },
+  "couponError": null,
+  "storeOpen": true
+}
+```
+
+- **`couponError`:** el cupón no aplica (no existe, venció, sin usos o no llega al mínimo) y trae
+  el mensaje para mostrar. La cotización **no falla** por el cupón.
+- **`missingForMinimum` > 0:** delivery debajo del mínimo. Mostrá "Te faltan $X" y deshabilitá
+  confirmar.
+- **`missingForFreeDelivery`:** para la barra "Te faltan $X para envío gratis".
+- **Selección inválida o producto agotado:** `400` con un mensaje listo para mostrar (ej.
+  "Combo Clásica: Elegí 1") y `details.itemIndex` para marcar la línea del carrito.
+
+### `POST /api/orders`
+
+Body = el de la cotización +:
+
+```json
+{
+  "contact": { "name": "Ana", "phone": "11 4444-5555" },
+  "address": {
+    "street": "Av. Corrientes",
+    "number": "1234",
+    "apt": "3B",
+    "betweenStreets": "Uruguay y Paraná",
+    "notes": "timbre 3"
+  },
+  "payment": {
+    "method": "card",
+    "cardNumber": "4242 4242 4242 4242",
+    "holderName": "ANA",
+    "expMonth": 12,
+    "expYear": 30,
+    "cvv": "123"
+  },
+  "notes": "opcional"
+}
+```
+
+- **`address`:** obligatoria si es `delivery`. En `pickup` se ignora.
+- **Pago en efectivo:** `{ "method": "cash", "cashAmount": 20000 }`. `cashAmount` ("¿con cuánto
+  pagás?") es opcional; si viene, tiene que cubrir el total.
+- **Tarjeta simulada:** Luhn, marca por prefijo, vencimiento MM/AA a futuro y CVV de 3 dígitos (4
+  en Amex). Se guardan solo `paymentBrand` y `paymentLast4`.
+
+| Tarjeta de prueba     | Resultado                             |
+| --------------------- | ------------------------------------- |
+| `4242 4242 4242 4242` | Aprobada (Visa)                       |
+| `5555 5555 5555 4444` | Aprobada (Mastercard)                 |
+| `3782 822463 10005`   | Aprobada (Amex, CVV de 4)             |
+| `4000 0000 0000 0002` | **Rechazada**: `402 PAYMENT_DECLINED` |
+
+Errores específicos:
+
+| HTTP | Cuándo                                                                                                                    |
+| ---- | ------------------------------------------------------------------------------------------------------------------------- |
+| 400  | Validación, selección inválida, tarjeta inválida o vencida, efectivo insuficiente, cupón que no aplica, debajo del mínimo |
+| 401  | Sin login: es el momento de pedir login (se navega como invitado hasta acá)                                               |
+| 402  | Tarjeta rechazada (simulado)                                                                                              |
+| 409  | Local cerrado, o el cupón se agotó entre la cotización y la confirmación                                                  |
+| 429  | Más de 10 pedidos en 15 min por usuario                                                                                   |
+
+### Estados y seguimiento del pedido
+
+```
+pending -> confirmed -> preparing -> on_the_way       -> delivered   (delivery)
+                                  -> ready_for_pickup -> delivered   (retiro)
+pending -> rejected (admin)    pending | confirmed -> cancelled (cliente o admin)
+```
+
+- **`history`:** `[{ status, changedAt, note }]` en orden, para el timeline del seguimiento.
+- **`canCancel`:** `true` si sos el dueño y está en `pending` o `confirmed`.
+- **`nextStatuses`:** solo con un usuario admin. Son los botones de "siguiente estado".
+- **Seguimiento:** polling de `GET /api/orders/:id` cada ~10 s mientras no esté en `delivered`,
+  `cancelled` o `rejected`.
+- **Transición inválida o cambio concurrente:** `409`.
+
+Etiquetas sugeridas: `pending` "Recibido", `confirmed` "Confirmado", `preparing` "En
+preparación", `on_the_way` "En camino", `ready_for_pickup` "Listo para retirar", `delivered`
+"Entregado", `cancelled` "Cancelado", `rejected` "Rechazado".
+
+---
+
 ## Health
 
 ### `GET /api/health`
@@ -238,6 +378,4 @@ Todo `/api/admin/*` exige un token de un usuario con rol `admin`. Por ahora hay 
 
 ## Próximas fases
 
-- **Fase 5 — Pedidos:** `POST /api/orders`, `GET /api/orders/mine`, `GET /api/orders/:id`,
-  `POST /api/orders/:id/cancel`.
-- **Fase 7 — Cupones:** `POST /api/coupons/validate`.
+- **Fase 6 — Admin:** listado de pedidos con filtros, CRUD de productos, categorías y modificadores, subida de imágenes, abrir o cerrar el local, auto-avance de estados y dashboard.
