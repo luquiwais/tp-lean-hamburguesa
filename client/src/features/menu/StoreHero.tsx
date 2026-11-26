@@ -1,19 +1,15 @@
 import type { ReactNode } from 'react';
-import { Bike, Clock, ShoppingBag } from 'lucide-react';
+import { Bike, Clock, ShoppingBag, Sparkles } from 'lucide-react';
 import { cn } from 'cn';
-import type { StoreSettings } from '@/lib/catalogContract';
+import type { StoreInfo } from '@burger/shared';
 import { formatARS } from '@/lib/format';
 
-type Props = { store: StoreSettings; imageUrl: string | null };
+type Props = { store: StoreInfo; imageUrl: string | null };
 
 // Header del local: estado, demora, envío y mínimo visibles antes de elegir nada
 // (sin sorpresas de precio al final).
 export function StoreHero({ store, imageUrl }: Props) {
-  const status = !store.isOpen
-    ? 'Cerrado ahora'
-    : store.closesAt
-      ? `Abierto hasta las ${store.closesAt}`
-      : 'Abierto ahora';
+  const status = store.isOpen ? 'Abierto ahora' : 'Cerrado ahora';
 
   return (
     <section className="bg-bone">
@@ -51,6 +47,12 @@ export function StoreHero({ store, imageUrl }: Props) {
               <ShoppingBag className="size-4" aria-hidden />
               Mínimo {formatARS(store.minOrderDelivery)}
             </Chip>
+            {store.freeDeliveryThreshold !== null && (
+              <Chip>
+                <Sparkles className="size-4" aria-hidden />
+                Envío gratis desde {formatARS(store.freeDeliveryThreshold)}
+              </Chip>
+            )}
           </ul>
         </div>
         {imageUrl && (

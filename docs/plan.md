@@ -128,13 +128,13 @@ Schemas Zod (producto, payload del pedido, auth) y tipos inferidos, usados por l
 8. Tests y pulido: Vitest + Supertest (pricing, transiciones, auth), estados vacíos, skeletons, accesibilidad, README con decisiones y créditos de las fotos (Unsplash, Pexels, Foodiesfeed).
 9. Deploy: front en Vercel, back en Render free.
 
-## Notas de la Fase 4 (para quien haga el back)
+## Notas de la Fase 4
 
-- **Contrato del catálogo (DECIDIDO: el del back)**: `GET /api/menu` (store + categorías + productos resumidos) y `GET /api/products/:slug` (detalle con grupos y modificadores). Schemas en `shared/src/schemas/catalog.ts`, referencia en `docs/api.md`, guía de migración del front en `docs/notas-jose.md`. El contrato que usó el front con mocks (`/categories`, `/products`, `/store`) quedó en `client/src/lib/catalogContract.ts` como TEMPORAL: el front tiene que migrar a los endpoints reales y después borrarlo.
-- **Contra la DB de la Fase 1**: `modifiers.max_quantity` ya está (si es > 1, el personalizador muestra un stepper) y "Más pedidos" sale del badge `popular`. Falta `store_settings.closes_at time` para "Abierto hasta las 23:30" (el contrato lo acepta `null` y muestra "Abierto ahora").
-- **Reglas y precio compartidos** en `shared/src/pricing.ts` (`validateSelections`, `unitPrice`): el `POST /orders` de la Fase 5 tiene que usar las mismas funciones con los datos de la DB. Tests en `shared/src/pricing.test.ts`.
-- **Mock**: `client/src/mocks/catalog.ts` tiene el catálogo de ejemplo (sirve de base para el seed de la Fase 1). Se apaga con `VITE_USE_MOCKS=false`; cuando el back esté, se borra.
-- **Pendiente** de esta fase: sincronizar el carrito con la cuenta al loguearse (necesita la auth de la Fase 3).
+- **Catálogo**: el front ya usa el contrato oficial del back: `GET /api/menu` para el menú y `GET /api/products/:slug` para el personalizador y el carrito (una query por producto, compartida). Referencia en `docs/api.md`.
+- **Carrito**: guarda `productId` + `productSlug` + selecciones; nombres y precios salen del detalle vigente. El precio del front es solo para mostrar: el `POST /orders` recalcula con `shared/src/pricing.ts`.
+- **Mock**: `client/src/mocks/catalog.ts` replica las respuestas del back para trabajar sin `server/.env`. Con el back corriendo: `VITE_USE_MOCKS=false npm run dev`.
+- **"Abierto hasta las 23:30"**: no está en la API (falta `store_settings.closes_at`); por ahora se muestra "Abierto ahora".
+- **Pendiente**: sincronizar el carrito con la cuenta al loguearse (necesita la auth de la Fase 3).
 
 ## Verificación
 

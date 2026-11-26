@@ -1,4 +1,4 @@
-import { categorySchema, productSchema, storeSettingsSchema } from '@/lib/catalogContract';
+import { menuResponseSchema, productDetailSchema } from '@burger/shared';
 import * as mock from '@/mocks/catalog';
 
 export class ApiError extends Error {
@@ -31,16 +31,21 @@ async function get<T>(path: string, schema: Parser<T>): Promise<T> {
   return schema.parse(body);
 }
 
-// ponytail: catálogo mock hasta que el back sirva /categories, /products y /store (Fase 2).
-// Contra el back real: VITE_USE_MOCKS=false npm run dev. Cuando esté listo, borrar src/mocks/.
+// ponytail: catálogo mock con el contrato oficial, para trabajar sin el back
+// corriendo (necesita server/.env). Contra la API real: VITE_USE_MOCKS=false npm run dev.
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false';
 
-async function catalog<T>(path: string, schema: Parser<T>, mockData: unknown): Promise<T> {
-  return USE_MOCKS ? schema.parse(mockData) : get(path, schema);
+function mockProduct(slug: string) {
+  const product = mock.products.find((p) => p.slug === slug);
+  if (!product) throw new ApiError(404, 'NOT_FOUND', 'Producto no encontrado');
+  return productDetailSchema.parse(product);
 }
 
 export const api = {
-  categories: () => catalog('/categories', categorySchema.array(), mock.categories),
-  products: () => catalog('/products', productSchema.array(), mock.products),
-  store: () => catalog('/store', storeSettingsSchema, mock.store),
+  menu: async () =>
+    USE_MOCKS ? menuResponseSchema.parse(mock.menu) : get('/menu', menuResponseSchema),
+  product: async (slug: string) =>
+    USE_MOCKS
+      ? mockProduct(slug)
+      : get(`/products/${encodeURIComponent(slug)}`, productDetailSchema),
 };

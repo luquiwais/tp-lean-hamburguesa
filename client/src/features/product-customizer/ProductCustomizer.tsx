@@ -1,15 +1,16 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { Navigate, useParams, useSearchParams } from 'react-router';
-import { Check, X } from 'lucide-react';
+import { Check, LoaderCircle, X } from 'lucide-react';
 import { cn } from 'cn';
 import {
   MAX_ITEM_QUANTITY,
   defaultSelections,
   unitPrice,
   validateSelections,
+  type ModifierGroup,
+  type ProductDetail,
   type Selection,
 } from '@burger/shared';
-import type { ModifierGroup, Product } from '@/lib/catalogContract';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,19 +24,28 @@ import { ProductImage } from '@/components/ProductImage';
 import { QuantityStepper } from '@/components/QuantityStepper';
 import { formatARS } from '@/lib/format';
 import { useCloseOverlay } from '@/lib/useCloseOverlay';
-import { useProducts } from '@/features/menu/queries';
+import { useProduct } from '@/features/menu/queries';
 import { useCart, type CartItem } from '@/features/cart/store';
 
 // Ruta /menu/:slug (y /menu/:slug?edit=<línea> para editar un ítem del carrito).
 export function ProductCustomizer() {
-  const { slug } = useParams();
+  const { slug = '' } = useParams();
   const [params] = useSearchParams();
-  const { data: products, isPending } = useProducts();
+  const { data: product, isPending } = useProduct(slug);
   const item = useCart((s) => s.items.find((i) => i.id === params.get('edit')));
   const close = useCloseOverlay();
 
-  if (isPending) return null;
-  const product = products?.find((p) => p.slug === slug);
+  if (isPending) {
+    return (
+      <Dialog open onOpenChange={(open) => !open && close()}>
+        <DialogContent className="max-w-40 justify-items-center" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">Cargando producto</DialogTitle>
+          <LoaderCircle className="size-6 animate-spin text-ink-muted" aria-hidden />
+        </DialogContent>
+      </Dialog>
+    );
+  }
+  // 404 (no existe o se dio de baja) o error: volvemos al menú.
   if (!product) return <Navigate to="/" replace />;
   const editing = item?.productId === product.id ? item : undefined;
 
@@ -54,7 +64,7 @@ type Qty = Record<string, number>;
 const toQty = (selections: Selection[]): Qty =>
   Object.fromEntries(selections.map((s) => [s.modifierId, s.quantity]));
 
-type CustomizerProps = { product: Product; editing?: CartItem; onClose: () => void };
+type CustomizerProps = { product: ProductDetail; editing?: CartItem; onClose: () => void };
 
 function Customizer({ product, editing, onClose }: CustomizerProps) {
   const add = useCart((s) => s.add);
@@ -83,7 +93,13 @@ function Customizer({ product, editing, onClose }: CustomizerProps) {
       document.getElementById(`group-${groupId}`)?.scrollIntoView({ block: 'center' });
       return;
     }
-    const next = { productId: product.id, quantity, selections, notes: notes.trim() };
+    const next = {
+      productId: product.id,
+      productSlug: product.slug,
+      quantity,
+      selections,
+      notes: notes.trim(),
+    };
     if (editing) update(editing.id, next);
     else add(next);
     onClose();
@@ -170,9 +186,13 @@ function Customizer({ product, editing, onClose }: CustomizerProps) {
   );
 }
 
-function ruleLabel({ minSelect: min, maxSelect: max }: ModifierGroup) {
-  if (min === 0) return max === 1 ? 'Opcional' : `Opcional · Hasta ${max}`;
-  return min === max ? `Obligatorio · Elegí ${min}` : `Obligatorio · Elegí de ${min} a ${max}`;
+// "Obligatorio · Elegí 1" / "Opcional · Hasta 3". Si el grupo trae su propia
+// descripción (cargada en el admin) va en lugar de la regla calculada.
+function ruleLabel({ minSelect: min, maxSelect: max, description }: ModifierGroup) {
+  const prefix = min > 0 ? 'Obligatorio' : 'Opcional';
+  if (description) return `${prefix} · ${description}`;
+  if (min === 0) return max === 1 ? prefix : `${prefix} · Hasta ${max}`;
+  return min === max ? `${prefix} · Elegí ${min}` : `${prefix} · Elegí de ${min} a ${max}`;
 }
 
 type GroupProps = {
