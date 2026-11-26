@@ -30,7 +30,12 @@ npm run dev                          # server en :4000, client en :5173
 | `npm run dev`       | Levanta server y client juntos         |
 | `npm run build`     | Build de producción de server y client |
 | `npm run typecheck` | Chequeo de tipos en los 3 paquetes     |
+| `npm test`          | Tests (Vitest)                         |
 | `npm run lint`      | ESLint en todo el repo                 |
 | `npm run format`    | Prettier                               |
+
+Mientras el back no sirva el catálogo (Fase 2), el front usa datos mock
+(`client/src/mocks/catalog.ts`). Para probar contra la API real:
+`VITE_USE_MOCKS=false npm run dev`.
 
 Ver [docs/plan.md](docs/plan.md) para el plan completo y las decisiones de diseño.

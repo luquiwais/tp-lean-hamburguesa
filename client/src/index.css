@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
 
 /*
   Tokens de diseno — direccion "clean / fresh" (inspiracion Shake Shack).
@@ -27,11 +28,60 @@
   --color-accent-700: #962e19;
 
   --radius-card: 1rem;
+
+  /* Rebote corto del contador del carrito al agregar algo. */
+  --animate-bump: bump 300ms ease-out;
+  @keyframes bump {
+    50% {
+      transform: scale(1.25);
+    }
+  }
+}
+
+/*
+  Tokens semanticos que usan los componentes de shadcn/ui (bg-primary, border,
+  ring...), mapeados a la paleta de arriba. Ojo: `accent` de shadcn es el fondo
+  de hover (hueso); el tomate sigue siendo accent-500/600/700.
+*/
+@theme inline {
+  --color-background: #ffffff;
+  --color-foreground: var(--color-ink);
+  --color-primary: var(--color-brand-600);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--color-bone);
+  --color-secondary-foreground: var(--color-ink);
+  --color-muted: var(--color-bone);
+  --color-muted-foreground: var(--color-ink-muted);
+  --color-accent: var(--color-bone);
+  --color-accent-foreground: var(--color-ink);
+  --color-destructive: var(--color-accent-600);
+  --color-border: var(--color-line);
+  --color-input: var(--color-line);
+  --color-ring: var(--color-brand-600);
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer base {
   html {
     color-scheme: light;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
   }
 
   body {

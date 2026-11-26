@@ -41,6 +41,9 @@ Registro textual de los prompts usados durante el desarrollo del TP.
 ## Prompt 13
 > dale stagea el commit y lo commiteo y pusheo yo
 
+## Prompt 14 (otra sesión: Fase 4, front)
+> https://github.com/luquiwais/tp-lean-hamburguesa.git primero abrilo y ahora quiero que te fijes que falta y dediques a hacer eso deceime que vas a hacer tipo back front o lo que sea
+
 ## Decisiones tomadas por cuestionario
 - Auth: navegar como invitado, login al confirmar el pedido.
 - Tokens: access token en memoria + refresh token en cookie httpOnly con rotación.

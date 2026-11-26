@@ -121,12 +121,20 @@ Schemas Zod (producto, payload del pedido, auth) y tipos inferidos, usados por l
 1. [HECHO] Supabase vía CLI (`npx supabase db push --remote --include-seed`): migraciones (schema + funciones `create_order` / `change_order_status`), seed (19 productos, 8 grupos, 30 modificadores, 2 cupones), bucket `products`, RLS verificado con la key pública. El admin se crea en Fase 3 con `npm run create-admin -w server` (bcrypt en el backend).
 2. Backend base: logger, errores, catálogo público (GET de categorías y productos con sus grupos).
 3. Auth: registro, login, refresh, logout, me; middlewares.
-4. Frontend base: tokens de diseño, layout, menú, personalizador, carrito.
+4. [HECHO, con catálogo mock] Frontend base: tokens de diseño, layout, menú, personalizador, carrito. Ver notas abajo.
 5. Checkout y pedidos: endpoint `POST /orders` (precio en el server + RPC), checkout, confirmación, tracker, mis pedidos.
 6. Admin: CRUD, uploads, gestión de pedidos y dashboard.
 7. Extras elegidos en D9.
 8. Tests y pulido: Vitest + Supertest (pricing, transiciones, auth), estados vacíos, skeletons, accesibilidad, README con decisiones y créditos de las fotos (Unsplash, Pexels, Foodiesfeed).
 9. Deploy: front en Vercel, back en Render free.
+
+## Notas de la Fase 4 (para quien haga el back)
+
+- **Contrato del catálogo** en `shared/src/schemas/catalog.ts` (camelCase, montos enteros): `GET /api/categories`, `GET /api/products` (cada producto con sus grupos y modificadores) y `GET /api/store`. El back devuelve todo ya ordenado y solo lo activo.
+- **Contra la DB de la Fase 1**: `modifiers.max_quantity` ya está (si es > 1, el personalizador muestra un stepper) y "Más pedidos" sale del badge `popular`. Falta `store_settings.closes_at time` para "Abierto hasta las 23:30" (el contrato lo acepta `null` y muestra "Abierto ahora").
+- **Reglas y precio compartidos** en `shared/src/pricing.ts` (`validateSelections`, `unitPrice`): el `POST /orders` de la Fase 5 tiene que usar las mismas funciones con los datos de la DB. Tests en `shared/src/pricing.test.ts`.
+- **Mock**: `client/src/mocks/catalog.ts` tiene el catálogo de ejemplo (sirve de base para el seed de la Fase 1). Se apaga con `VITE_USE_MOCKS=false`; cuando el back esté, se borra.
+- **Pendiente** de esta fase: sincronizar el carrito con la cuenta al loguearse (necesita la auth de la Fase 3).
 
 ## Verificación
 
