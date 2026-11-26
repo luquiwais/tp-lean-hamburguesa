@@ -51,6 +51,18 @@ Registro textual de los prompts usados durante el desarrollo del TP.
 > dale mandale con la stage 3  y deja stageado asi commiteo
 > y cuantas stages nos faltan que estamos con muy poco tiempo
 
+## Prompt 16
+> resolve el conflicto del tree que jose pusheo
+
+## Prompt 17
+> la api la arme yo asi que mantene la mia
+
+## Prompt 18
+> deja limpio el git y dejale escrito bien todo lo de jose
+
+## Prompt 19
+> y retoma la fase 3
+
 ## Decisiones tomadas por cuestionario
 - Auth: navegar como invitado, login al confirmar el pedido.
 - Tokens: access token en memoria + refresh token en cookie httpOnly con rotación.
