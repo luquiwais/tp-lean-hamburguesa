@@ -19,6 +19,14 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     return;
   }
 
+  // Subida de archivos (multer): tamanio, cantidad de archivos, campos raros
+  if (err?.name === 'MulterError') {
+    const message =
+      err.code === 'LIMIT_FILE_SIZE' ? 'La imagen supera los 2 MB' : 'Archivo invalido';
+    res.status(400).json({ error: { code: 'BAD_REQUEST', message }, traceId: req.traceId });
+    return;
+  }
+
   // JSON mal formado en el body
   if (err?.type === 'entity.parse.failed') {
     res.status(400).json({

@@ -220,11 +220,6 @@ Flujo recomendado en el front:
 4. **Login:** se pide recién al confirmar el pedido. Mientras tanto se navega y se arma el carrito
    como invitado.
 
-### Admin
-
-Todo `/api/admin/*` exige un token de un usuario con rol `admin`. Por ahora hay solo
-`GET /api/admin/ping`; el resto llega en la Fase 6.
-
 ---
 
 ## Pedidos
@@ -367,6 +362,62 @@ preparación", `on_the_way` "En camino", `ready_for_pickup` "Listo para retirar"
 
 ---
 
+## Admin
+
+Todo `/api/admin/*` exige un token de un usuario con rol `admin` (si no, `401` o `403`). Las
+respuestas no se cachean. Cualquier cambio de catálogo o configuración **invalida al instante el
+caché del menú público**.
+
+Schemas en `@burger/shared` (`schemas/admin.ts`): `productInputSchema`, `productUpdateSchema`,
+`adminProductSchema`, `categoryInputSchema`, `modifierGroupInputSchema`, `modifierInputSchema`,
+`settingsUpdateSchema`, `adminSettingsSchema`, `adminOrdersQuerySchema`, `adminOrdersPageSchema`,
+`dashboardSchema`.
+
+| Método y ruta                                           | Qué hace                                                                                                               |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/admin/dashboard`                              | Ventas (hoy, 7 y 30 días), ticket promedio, pedidos activos, por estado, delivery vs retiro, top 5, ventas por día (7) |
+| `GET /api/admin/orders?status=&active=&page=&pageSize=` | Listado paginado. `active=true` = vista de cocina (no terminados, los más viejos primero)                              |
+| `GET /api/admin/orders/:id`                             | Detalle con `nextStatuses` (botones de siguiente estado)                                                               |
+| `PATCH /api/admin/orders/:id/status`                    | `{ status, note? }`. Transición inválida o concurrente: `409`                                                          |
+| `GET` / `PATCH /api/admin/settings`                     | Abierto o cerrado, envío, mínimo, envío gratis, tiempo estimado y `autoAdvance`                                        |
+| `GET` / `POST /api/admin/categories`, `PATCH /:id`      | Categorías (incluye las inactivas). Baja = `isActive: false`                                                           |
+| `GET` / `POST /api/admin/products`, `PATCH /:id`        | Productos (incluye los inactivos). `modifierGroupIds` reemplaza los grupos en ese orden                                |
+| `DELETE /api/admin/products/:id`                        | Baja lógica (`204`). Sale del menú, los pedidos viejos lo conservan y se reactiva con `PATCH { isActive: true }`       |
+| `POST /api/admin/products/:id/image`                    | `multipart/form-data`, campo `image`. Devuelve el producto con `imageUrl`                                              |
+| `GET` / `POST /api/admin/modifier-groups`, `PATCH /:id` | Grupos con sus opciones y `productCount`                                                                               |
+| `POST /api/admin/modifier-groups/:id/modifiers`         | Agrega una opción al grupo                                                                                             |
+| `PATCH /api/admin/modifiers/:id`                        | Edita una opción (precio, disponible, por defecto...)                                                                  |
+
+Detalles:
+
+- **Slugs y codes:** si no mandás `slug` (productos y categorías) o `code` (grupos), se generan
+  desde el nombre ("Bacon Crispy" → `bacon-crispy`). Un slug repetido devuelve `409`.
+- **Imágenes:**
+  - **Formatos:** JPG, PNG o WebP, hasta **2 MB**.
+  - **Validación:** el back verifica que el contenido sea una imagen real (no alcanza con la
+    extensión ni el mimetype).
+  - **Procesamiento:** la convierte a **WebP de hasta 800px** y la sube a Supabase Storage
+    (bucket público `products`). La anterior se borra.
+  - **Errores:** `400` con el mensaje para mostrar.
+
+  ```ts
+  const form = new FormData();
+  form.append('image', file); // <input type="file" accept="image/jpeg,image/png,image/webp">
+  await fetch(`/api/admin/products/${id}/image`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }, // sin Content-Type: lo pone el navegador
+    body: form,
+  });
+  ```
+
+- **Auto-avance (demo):** con `PATCH /settings { "autoAdvance": true }`, cada 45 s los pedidos
+  activos que llevan más de 45 s sin cambios avanzan un paso, con la nota "Avance automatico
+  (demo)". Nunca pisa un cambio manual.
+- **Dashboard:** los pedidos cancelados o rechazados no suman ventas. Los días se agrupan en hora
+  de Argentina.
+
+---
+
 ## Health
 
 ### `GET /api/health`
@@ -378,4 +429,5 @@ preparación", `on_the_way` "En camino", `ready_for_pickup` "Listo para retirar"
 
 ## Próximas fases
 
-- **Fase 6 — Admin:** listado de pedidos con filtros, CRUD de productos, categorías y modificadores, subida de imágenes, abrir o cerrar el local, auto-avance de estados y dashboard.
+- **Fase 8:** tests de API (Vitest + Supertest) y pulido.
+- **Fase 9:** deploy (Vercel + Render).

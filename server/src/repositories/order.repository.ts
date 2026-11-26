@@ -99,7 +99,88 @@ const DETAIL_SELECT = `
 const LIST_SELECT =
   'id, order_number, status, fulfillment, total, created_at, order_items ( quantity )';
 
+export const ACTIVE_STATUSES: OrderStatus[] = [
+  'pending',
+  'confirmed',
+  'preparing',
+  'on_the_way',
+  'ready_for_pickup',
+];
+
+export interface AdminOrderListRow extends OrderListRow {
+  customer_name: string;
+  updated_at: string;
+}
+
+export interface DashboardOrderRow {
+  status: OrderStatus;
+  fulfillment: 'delivery' | 'pickup';
+  total: number;
+  created_at: string;
+  order_items: { product_name: string; quantity: number; item_total: number }[];
+}
+
 export const orderRepository = {
+  async listAdmin(filters: {
+    status?: OrderStatus;
+    active?: boolean;
+    page: number;
+    pageSize: number;
+  }): Promise<{ rows: AdminOrderListRow[]; total: number }> {
+    const from = (filters.page - 1) * filters.pageSize;
+    let query = supabase
+      .from('orders')
+      .select(
+        'id, order_number, status, fulfillment, customer_name, total, created_at, updated_at, order_items ( quantity )',
+        { count: 'exact' },
+      )
+      .order('created_at', { ascending: filters.active === true }) // cocina: los mas viejos primero
+      .range(from, from + filters.pageSize - 1);
+    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.active) query = query.in('status', ACTIVE_STATUSES);
+
+    const { data, error, count } = await query.returns<AdminOrderListRow[]>();
+    if (error) throw error;
+    return { rows: data, total: count ?? 0 };
+  },
+
+  // Pedidos activos sin cambios desde `before` (para el auto-avance de la demo).
+  async listStaleActive(
+    before: Date,
+    limit = 50,
+  ): Promise<{ id: string; status: OrderStatus; fulfillment: 'delivery' | 'pickup' }[]> {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, status, fulfillment')
+      .in('status', ACTIVE_STATUSES)
+      .lt('updated_at', before.toISOString())
+      .order('updated_at')
+      .limit(limit);
+    if (error) throw error;
+    return data;
+  },
+
+  async listSince(since: Date): Promise<DashboardOrderRow[]> {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(
+        'status, fulfillment, total, created_at, order_items ( product_name, quantity, item_total )',
+      )
+      .gte('created_at', since.toISOString())
+      .returns<DashboardOrderRow[]>();
+    if (error) throw error;
+    return data;
+  },
+
+  async countByStatus(statuses: OrderStatus[]): Promise<number> {
+    const { count, error } = await supabase
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .in('status', statuses);
+    if (error) throw error;
+    return count ?? 0;
+  },
+
   // Escritura atomica (pedido + items + modificadores + historial + cupon).
   async create(
     order: CreateOrderPayload,

@@ -8,3 +8,5 @@ export * from './schemas/orders';
 export * from './pricing';
 export * from './orderTotals';
 export * from './payments';
+export * from './schemas/admin';
+export * from './slug';

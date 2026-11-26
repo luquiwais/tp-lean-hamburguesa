@@ -66,6 +66,9 @@ Registro textual de los prompts usados durante el desarrollo del TP.
 ## Prompt 20
 > dale vamos con eso, ya pushie
 
+## Prompt 21
+> dale mandale con el 6
+
 ## Decisiones tomadas por cuestionario
 - Auth: navegar como invitado, login al confirmar el pedido.
 - Tokens: access token en memoria + refresh token en cookie httpOnly con rotación.

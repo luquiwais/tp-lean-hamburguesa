@@ -4,6 +4,8 @@ import {
   nextStatusesFor,
   unitPrice,
   validateSelections,
+  type AdminOrdersPage,
+  type AdminOrdersQuery,
   type CouponRule,
   type CreateOrderInput,
   type OrderDetail,
@@ -284,6 +286,27 @@ export const orderService = {
       items: items.length,
     });
     return this.getById(created.id, actor);
+  },
+
+  // Admin: listado paginado (filtro por estado o solo activos = vista cocina).
+  async listAdmin(query: AdminOrdersQuery): Promise<AdminOrdersPage> {
+    const { rows, total } = await orderRepository.listAdmin(query);
+    return {
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+      items: rows.map((r) => ({
+        id: r.id,
+        orderNumber: r.order_number,
+        status: r.status,
+        fulfillment: r.fulfillment,
+        customerName: r.customer_name,
+        total: r.total,
+        itemCount: r.order_items.reduce((n, i) => n + i.quantity, 0),
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      })),
+    };
   },
 
   async listMine(actor: Actor): Promise<OrderSummary[]> {
