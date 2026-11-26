@@ -1,0 +1,46 @@
+@import 'tailwindcss';
+
+/*
+  Tokens de diseno — direccion "clean / fresh" (inspiracion Shake Shack).
+  Contrastes (texto normal requiere 4.5:1):
+    - blanco sobre brand-600 (#2F6B3A) ~6.4:1
+    - blanco sobre accent-600 (#B8391F) ~5.3:1
+    - ink (#1F2421) sobre bone (#F7F5F0) ~14:1
+*/
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+
+  --color-bone: #f7f5f0;
+  --color-ink: #1f2421;
+  --color-ink-muted: #5b625e;
+  --color-line: #e4e1d8;
+
+  --color-brand-50: #eef5ef;
+  --color-brand-100: #d5e8d8;
+  --color-brand-500: #3d8a4b;
+  --color-brand-600: #2f6b3a;
+  --color-brand-700: #24532d;
+
+  --color-accent-500: #d0472a;
+  --color-accent-600: #b8391f;
+  --color-accent-700: #962e19;
+
+  --radius-card: 1rem;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-white font-sans text-ink antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+}
