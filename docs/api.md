@@ -21,14 +21,15 @@ import { menuResponseSchema, type MenuResponse, type ProductDetail } from '@burg
 }
 ```
 
-| HTTP | `code`         | Cuándo                                                                                   |
-| ---- | -------------- | ---------------------------------------------------------------------------------------- |
-| 400  | `BAD_REQUEST`  | Input inválido. `details` trae los errores por campo                                     |
-| 401  | `UNAUTHORIZED` | Falta login o token vencido (Fase 3)                                                     |
-| 403  | `FORBIDDEN`    | Logueado pero sin permiso (ej: cliente en ruta admin)                                    |
-| 404  | `NOT_FOUND`    | Recurso o ruta inexistente                                                               |
-| 409  | `CONFLICT`     | Choca con el estado actual (ej: transición de pedido inválida)                           |
-| 500  | `INTERNAL`     | Error inesperado. Mostrar mensaje genérico; el `traceId` sirve para buscarlo en los logs |
+| HTTP | `code`              | Cuándo                                                                                   |
+| ---- | ------------------- | ---------------------------------------------------------------------------------------- |
+| 400  | `BAD_REQUEST`       | Input inválido. `details` trae los errores por campo                                     |
+| 401  | `UNAUTHORIZED`      | Falta login o token vencido (Fase 3)                                                     |
+| 403  | `FORBIDDEN`         | Logueado pero sin permiso (ej: cliente en ruta admin)                                    |
+| 404  | `NOT_FOUND`         | Recurso o ruta inexistente                                                               |
+| 409  | `CONFLICT`          | Choca con el estado actual (ej: transición de pedido inválida)                           |
+| 429  | `TOO_MANY_REQUESTS` | Demasiados intentos (rate limit de login y registro)                                     |
+| 500  | `INTERNAL`          | Error inesperado. Mostrar mensaje genérico; el `traceId` sirve para buscarlo en los logs |
 
 Schema: `apiErrorSchema`.
 
@@ -156,6 +157,76 @@ Cómo renderizar cada grupo:
 
 ---
 
+## Auth
+
+Auth propia con JWT. El **access token** (15 min) va en el body y el front lo guarda **en
+memoria** (nunca en localStorage). El **refresh token** (7 días) va en una cookie httpOnly `rt`
+con path `/api/auth`: JS no la puede leer y el navegador la manda sola. Por eso los requests a
+`/api/auth/*` van con `credentials: 'include'`.
+
+Schemas: `registerSchema`, `loginSchema`, `authResponseSchema`, `authUserSchema`.
+
+| Método y ruta             | Body                                | Respuesta                                      |
+| ------------------------- | ----------------------------------- | ---------------------------------------------- |
+| `POST /api/auth/register` | `{ email, password, name, phone? }` | `201` + `AuthResponse` + cookie `rt`           |
+| `POST /api/auth/login`    | `{ email, password }`               | `200` + `AuthResponse` + cookie `rt`           |
+| `POST /api/auth/refresh`  | (nada, usa la cookie)               | `200` + `AuthResponse` + cookie `rt` **nueva** |
+| `POST /api/auth/logout`   | (nada, usa la cookie)               | `204` y borra la cookie                        |
+| `GET /api/auth/me`        | Header `Authorization: Bearer <t>`  | `200` + `AuthUser`                             |
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "expiresIn": 900,
+  "user": {
+    "id": "uuid",
+    "email": "ana@mail.com",
+    "name": "Ana",
+    "phone": null,
+    "role": "customer"
+  }
+}
+```
+
+Reglas:
+
+- **Validación:** el email se normaliza (minúsculas, sin espacios). La contraseña tiene de 8 a
+  72 caracteres. Errores de validación: `400` con `details` por campo.
+- **Rol:** el registro **siempre** crea `customer`, aunque el body traiga `role`. Los admins se
+  crean con `npm run create-admin -w server -- --email <email> --name "<nombre>"`, que pide la
+  contraseña oculta.
+- **Errores:**
+  - Email duplicado en el registro: `409`.
+  - Login incorrecto: `401` con un mensaje único ("Email o contraseña incorrectos"), exista o no
+    el email.
+  - Rate limit: `429 TOO_MANY_REQUESTS` después de **10 intentos fallidos cada 15 min por IP**
+    (registro y login comparten el cupo; los logins correctos no cuentan). El refresh tiene 60
+    cada 15 min.
+- **Rotación del refresh:**
+  - Cada `refresh` invalida el token usado y entrega uno nuevo.
+  - Si llega un token ya usado (posible robo), se revoca **toda la sesión** y hay que volver a
+    loguearse.
+  - No llames a `refresh` en paralelo desde dos lugares: compartí una sola Promise en vuelo.
+- **Rutas protegidas:** sin token o con token inválido o vencido dan `401`. Con un rol que no
+  corresponde (cliente en `/api/admin/*`) dan `403`.
+
+Flujo recomendado en el front:
+
+1. **Al cargar la app:** `POST /api/auth/refresh`. Si da `200`, la sesión está activa y el access
+   token queda en memoria. Si da `401`, el usuario es invitado.
+2. **Requests protegidos:** van con `Authorization: Bearer <accessToken>`.
+3. **Ante un `401`:** un `refresh` y reintentar el request una vez. Si el refresh también falla,
+   mandar al login.
+4. **Login:** se pide recién al confirmar el pedido. Mientras tanto se navega y se arma el carrito
+   como invitado.
+
+### Admin
+
+Todo `/api/admin/*` exige un token de un usuario con rol `admin`. Por ahora hay solo
+`GET /api/admin/ping`; el resto llega en la Fase 6.
+
+---
+
 ## Health
 
 ### `GET /api/health`
@@ -167,10 +238,6 @@ Cómo renderizar cada grupo:
 
 ## Próximas fases
 
-- **Fase 3 — Auth:** `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`,
-  `POST /api/auth/logout`, `GET /api/auth/me`. El access token viaja en
-  `Authorization: Bearer <token>` y se guarda **en memoria** (no localStorage); el refresh token
-  va en una cookie httpOnly que maneja el navegador solo (usar `credentials: 'include'`).
 - **Fase 5 — Pedidos:** `POST /api/orders`, `GET /api/orders/mine`, `GET /api/orders/:id`,
   `POST /api/orders/:id/cancel`.
 - **Fase 7 — Cupones:** `POST /api/coupons/validate`.

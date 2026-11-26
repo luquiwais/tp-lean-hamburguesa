@@ -120,7 +120,7 @@ Schemas Zod (producto, payload del pedido, auth) y tipos inferidos, usados por l
 0. [HECHO] `docs/prompts.md`, scaffolding del monorepo, ESLint/Prettier, `.env.example`, `.gitignore` (incluye `.env` y memoria).
 1. [HECHO] Supabase vía CLI (`npx supabase db push --remote --include-seed`): migraciones (schema + funciones `create_order` / `change_order_status`), seed (19 productos, 8 grupos, 30 modificadores, 2 cupones), bucket `products`, RLS verificado con la key pública. El admin se crea en Fase 3 con `npm run create-admin -w server` (bcrypt en el backend).
 2. [HECHO] Backend base: `GET /api/menu` (store + categorías + productos, 1 request, caché 30 s con coalescing) y `GET /api/products/:slug` (grupos + modificadores). Middleware `validate` (Zod), `lib/cache.ts`, contratos en `shared/src/schemas/catalog.ts`, referencia para el front en `docs/api.md`.
-3. Auth: registro, login, refresh, logout, me; middlewares.
+3. [HECHO] Auth propia: register, login, refresh con rotación y detección de reuso (revoca la familia), logout, me. bcrypt (costo 12) + JWT HS256 de 15 min + refresh opaco con HMAC en la DB y cookie httpOnly (path /api/auth). Middlewares `authenticate` y `authorize`, rate limit en login y registro, `/api/admin` protegido, script `npm run create-admin -w server`. Probado de punta a punta contra la DB.
 4. [HECHO, con catálogo mock] Frontend base: tokens de diseño, layout, menú, personalizador, carrito. Ver notas abajo.
 5. Checkout y pedidos: endpoint `POST /orders` (precio en el server + RPC), checkout, confirmación, tracker, mis pedidos.
 6. Admin: CRUD, uploads, gestión de pedidos y dashboard.

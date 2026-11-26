@@ -3,4 +3,5 @@
 export * from './schemas/common';
 export * from './schemas/health';
 export * from './schemas/catalog';
+export * from './schemas/auth';
 export * from './pricing';
