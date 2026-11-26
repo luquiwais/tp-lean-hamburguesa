@@ -34,8 +34,8 @@ npm run dev                          # server en :4000, client en :5173
 | `npm run lint`      | ESLint en todo el repo                 |
 | `npm run format`    | Prettier                               |
 
-Mientras el back no sirva el catálogo (Fase 2), el front usa datos mock
-(`client/src/mocks/catalog.ts`). Para probar contra la API real:
+Por defecto el front usa un mock del catálogo (`client/src/mocks/catalog.ts`) con el mismo
+contrato que la API, así se puede trabajar sin `server/.env`. Con el back corriendo:
 `VITE_USE_MOCKS=false npm run dev`.
 
 Ver [docs/plan.md](docs/plan.md) para el plan completo y las decisiones de diseño.

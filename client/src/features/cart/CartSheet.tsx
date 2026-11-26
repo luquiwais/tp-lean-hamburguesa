@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ShoppingBag } from 'lucide-react';
+import { LoaderCircle, ShoppingBag } from 'lucide-react';
 import { MAX_ITEM_QUANTITY } from '@burger/shared';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,15 +14,15 @@ import { ProductImage } from '@/components/ProductImage';
 import { QuantityStepper } from '@/components/QuantityStepper';
 import { formatARS } from '@/lib/format';
 import { useCloseOverlay } from '@/lib/useCloseOverlay';
-import { useStoreSettings } from '@/features/menu/queries';
+import { useMenu } from '@/features/menu/queries';
 import { useCart } from './store';
 import { useCartSummary } from './useCartSummary';
 
 // Ruta /carrito: drawer a la derecha en desktop, pantalla completa en mobile.
 export function CartSheet() {
   const close = useCloseOverlay();
-  const { lines, count, subtotal, hasInvalid } = useCartSummary();
-  const { data: store } = useStoreSettings();
+  const { lines, count, subtotal, hasInvalid, ready } = useCartSummary();
+  const store = useMenu().data?.store;
   const missing = store ? store.minOrderDelivery - subtotal : 0;
 
   return (
@@ -46,6 +46,11 @@ export function CartSheet() {
             <Button className="rounded-full" onClick={close}>
               Ver el menú
             </Button>
+          </div>
+        ) : !ready ? (
+          <div className="flex flex-1 justify-center pt-16 text-ink-muted" role="status">
+            <LoaderCircle className="size-6 animate-spin" aria-hidden />
+            <span className="sr-only">Cargando tu pedido…</span>
           </div>
         ) : (
           <>

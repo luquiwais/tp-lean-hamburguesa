@@ -1,25 +1,26 @@
 import { Link } from 'react-router';
 import { Plus } from 'lucide-react';
 import { cn } from 'cn';
-import { defaultSelections } from '@burger/shared';
-import type { Product } from '@/lib/catalogContract';
+import type { ProductSummary } from '@burger/shared';
 import { BadgePill } from '@/components/BadgePill';
 import { ProductImage } from '@/components/ProductImage';
 import { formatARS } from '@/lib/format';
 import { useCart } from '@/features/cart/store';
 
 type Props = {
-  product: Product;
+  product: ProductSummary;
   /** Siempre foto arriba (carrusel "Más pedidos"). */
   stacked?: boolean;
 };
 
 // Mobile: fila con la foto a la derecha. Desktop (md+): tarjeta con foto arriba.
-// Toda la tarjeta abre el personalizador (link estirado); el "+" agrega directo
-// solo si el producto no tiene grupos obligatorios.
+// Toda la tarjeta abre el personalizador (link estirado). El "+" agrega directo
+// si no hay opciones obligatorias; si las hay, abre el personalizador.
+const plusClass =
+  'absolute right-2 bottom-2 z-10 grid size-10 place-items-center rounded-full bg-white text-ink shadow-md ring-1 ring-line transition-colors hover:bg-brand-600 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 active:scale-95';
+
 export function ProductCard({ product, stacked = false }: Props) {
   const add = useCart((s) => s.add);
-  const quickAdd = product.isAvailable && product.modifierGroups.every((g) => g.minSelect === 0);
 
   return (
     <article
@@ -66,23 +67,33 @@ export function ProductCard({ product, stacked = false }: Props) {
             Agotado
           </span>
         )}
-        {quickAdd && (
-          <button
-            type="button"
-            onClick={() =>
-              add({
-                productId: product.id,
-                quantity: 1,
-                selections: defaultSelections(product),
-                notes: '',
-              })
-            }
-            className="absolute right-2 bottom-2 z-10 grid size-10 place-items-center rounded-full bg-white text-ink shadow-md ring-1 ring-line transition-colors hover:bg-brand-600 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 active:scale-95"
-            aria-label={`Agregar ${product.name} al pedido`}
-          >
-            <Plus className="size-5" aria-hidden />
-          </button>
-        )}
+        {product.isAvailable &&
+          (product.hasRequiredModifiers ? (
+            <Link
+              to={`/menu/${product.slug}`}
+              className={plusClass}
+              aria-label={`Elegir opciones de ${product.name}`}
+            >
+              <Plus className="size-5" aria-hidden />
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                add({
+                  productId: product.id,
+                  productSlug: product.slug,
+                  quantity: 1,
+                  selections: [],
+                  notes: '',
+                })
+              }
+              className={plusClass}
+              aria-label={`Agregar ${product.name} al pedido`}
+            >
+              <Plus className="size-5" aria-hidden />
+            </button>
+          ))}
       </div>
     </article>
   );

@@ -1,7 +1,8 @@
-import type { Category, ProductInput, StoreSettingsInput } from '@/lib/catalogContract';
+import type { MenuResponse, ModifierGroup, ProductDetail, StoreInfo } from '@burger/shared';
 
-// Catálogo de ejemplo con la forma exacta del contrato (shared/src/schemas/catalog.ts).
-// Se usa hasta que el back sirva el catálogo real y sirve de base para el seed (Fase 1).
+// Catálogo de ejemplo con el contrato oficial del back (GET /api/menu y
+// GET /api/products/:slug, ver docs/api.md). Se usa mientras no tengas el
+// back corriendo con su .env (VITE_USE_MOCKS=false para usar la API real).
 // Fotos de Unsplash (licencia Unsplash, uso libre).
 
 const uid = (kind: number, n: number) =>
@@ -9,23 +10,32 @@ const uid = (kind: number, n: number) =>
 const img = (photo: string) =>
   `https://images.unsplash.com/photo-${photo}?auto=format&fit=crop&w=800&q=70`;
 
+const categories = [
+  { id: uid(1, 1), name: 'Hamburguesas', slug: 'hamburguesas' },
+  { id: uid(1, 2), name: 'Combos', slug: 'combos' },
+  { id: uid(1, 3), name: 'Para acompañar', slug: 'para-acompanar' },
+  { id: uid(1, 4), name: 'Bebidas', slug: 'bebidas' },
+  { id: uid(1, 5), name: 'Postres', slug: 'postres' },
+];
 const cat = {
-  hamburguesas: uid(1, 1),
-  combos: uid(1, 2),
-  acompanar: uid(1, 3),
-  bebidas: uid(1, 4),
-  postres: uid(1, 5),
+  hamburguesas: 'hamburguesas',
+  combos: 'combos',
+  acompanar: 'para-acompanar',
+  bebidas: 'bebidas',
+  postres: 'postres',
 };
 
-export const categories: Category[] = [
-  { id: cat.hamburguesas, name: 'Hamburguesas', slug: 'hamburguesas' },
-  { id: cat.combos, name: 'Combos', slug: 'combos' },
-  { id: cat.acompanar, name: 'Para acompañar', slug: 'para-acompanar' },
-  { id: cat.bebidas, name: 'Bebidas', slug: 'bebidas' },
-  { id: cat.postres, name: 'Postres', slug: 'postres' },
-];
-
-type GroupInput = ProductInput['modifierGroups'][number];
+// Los grupos se escriben cortos; group() completa lo que agrega el contrato.
+type GroupInput = Pick<ModifierGroup, 'id' | 'name' | 'minSelect' | 'maxSelect'> & {
+  modifiers: (Omit<ModifierGroup['modifiers'][number], 'maxQuantity'> & { maxQuantity?: number })[];
+};
+const group = (g: GroupInput): ModifierGroup => ({
+  ...g,
+  code: g.name.toLowerCase().replace(/\W+/g, '_'),
+  description: g.maxSelect > 1 && g.minSelect === 0 ? `Podés elegir hasta ${g.maxSelect}` : '',
+  isRequired: g.minSelect > 0,
+  modifiers: g.modifiers.map((m) => ({ maxQuantity: 1, ...m })),
+});
 type ModifierExtras = { isDefault?: boolean; isAvailable?: boolean; maxQuantity?: number };
 
 let modifierCount = 0;
@@ -144,22 +154,26 @@ const saborGaseosa: GroupInput = {
 const burger = [medallones, pan, extras, sacale];
 const burgerFixed = [pan, extras, sacale];
 
-type Draft = Pick<ProductInput, 'name' | 'slug' | 'description' | 'basePrice'> &
-  Partial<ProductInput>;
+type Draft = Pick<ProductDetail, 'name' | 'slug' | 'description' | 'basePrice'> &
+  Partial<Omit<ProductDetail, 'modifierGroups'>> & { modifierGroups?: GroupInput[] };
 
 let productCount = 0;
-const product = (categoryId: string, draft: Draft): ProductInput => ({
-  id: uid(4, ++productCount),
-  categoryId,
-  imageUrl: null,
-  type: 'simple',
-  badges: [],
-  isAvailable: true,
-  modifierGroups: [],
-  ...draft,
-});
+const product = (categorySlug: string, { modifierGroups = [], ...draft }: Draft): ProductDetail => {
+  const groups = modifierGroups.map(group);
+  return {
+    id: uid(4, ++productCount),
+    categorySlug,
+    imageUrl: null,
+    type: 'simple',
+    badges: [],
+    isAvailable: true,
+    hasRequiredModifiers: groups.some((g) => g.isRequired),
+    modifierGroups: groups,
+    ...draft,
+  };
+};
 
-export const products: ProductInput[] = [
+export const products: ProductDetail[] = [
   product(cat.hamburguesas, {
     name: 'Clásica',
     slug: 'clasica',
@@ -369,12 +383,24 @@ export const products: ProductInput[] = [
   }),
 ];
 
-export const store: StoreSettingsInput = {
+const store: StoreInfo = {
   isOpen: true,
   deliveryFee: 1800,
   minOrderDelivery: 12000,
   freeDeliveryThreshold: 35000,
   etaMin: 30,
   etaMax: 45,
-  closesAt: '23:30',
+};
+
+// Mismo armado que GET /api/menu: categorías con productos resumidos (sin grupos).
+export const menu: MenuResponse = {
+  store,
+  categories: categories
+    .map((c) => ({
+      ...c,
+      products: products
+        .filter((p) => p.categorySlug === c.slug)
+        .map(({ categorySlug: _slug, modifierGroups: _groups, ...summary }) => summary),
+    }))
+    .filter((c) => c.products.length > 0),
 };

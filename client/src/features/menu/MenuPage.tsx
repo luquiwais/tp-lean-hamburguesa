@@ -1,35 +1,30 @@
 import { useMemo } from 'react';
 import { Link, Outlet } from 'react-router';
 import { Hamburger } from 'lucide-react';
-import type { Category, Product, StoreSettings } from '@/lib/catalogContract';
+import type { MenuResponse } from '@burger/shared';
 import { Button } from '@/components/ui/button';
 import { CartBar } from '@/features/cart/CartBar';
 import { useCartSummary } from '@/features/cart/useCartSummary';
 import { CategoryNav } from './CategoryNav';
 import { ProductCard } from './ProductCard';
 import { StoreHero } from './StoreHero';
-import { useCategories, useProducts, useStoreSettings } from './queries';
+import { useMenu } from './queries';
 
 // Página principal. El personalizador (/menu/:slug) y el carrito (/carrito)
 // se renderizan en el <Outlet /> como overlays encima del menú.
 export function MenuPage() {
-  const categories = useCategories();
-  const products = useProducts();
-  const store = useStoreSettings();
+  const menu = useMenu();
   const { count } = useCartSummary();
 
   let content;
-  if (categories.data && products.data && store.data) {
-    content = <Menu categories={categories.data} products={products.data} store={store.data} />;
-  } else if (categories.isError || products.isError || store.isError) {
+  if (menu.data) {
+    content = <Menu menu={menu.data} />;
+  } else if (menu.isError) {
     content = (
       <div className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-24 text-center">
         <p className="text-lg font-semibold">No pudimos cargar el menú.</p>
         <p className="text-ink-muted">Revisá tu conexión y probá de nuevo.</p>
-        <Button
-          className="rounded-full"
-          onClick={() => [categories, products, store].forEach((q) => q.isError && q.refetch())}
-        >
+        <Button className="rounded-full" onClick={() => void menu.refetch()}>
           Reintentar
         </Button>
       </div>
@@ -60,20 +55,15 @@ export function MenuPage() {
   );
 }
 
-type MenuProps = { categories: Category[]; products: Product[]; store: StoreSettings };
-
-function Menu({ categories, products, store }: MenuProps) {
-  const popular = useMemo(() => products.filter((p) => p.badges.includes('popular')), [products]);
+// Las categorías ya vienen ordenadas, con sus productos y sin vacías (GET /api/menu).
+function Menu({ menu }: { menu: MenuResponse }) {
+  const popular = useMemo(
+    () => menu.categories.flatMap((c) => c.products).filter((p) => p.badges.includes('popular')),
+    [menu],
+  );
   const sections = useMemo(
-    () =>
-      categories
-        .map((c) => ({
-          id: c.slug,
-          title: c.name,
-          items: products.filter((p) => p.categoryId === c.id),
-        }))
-        .filter((s) => s.items.length > 0),
-    [categories, products],
+    () => menu.categories.map((c) => ({ id: c.slug, title: c.name, items: c.products })),
+    [menu],
   );
   const navSections = useMemo(
     () => [
@@ -85,7 +75,7 @@ function Menu({ categories, products, store }: MenuProps) {
 
   return (
     <>
-      <StoreHero store={store} imageUrl={popular[0]?.imageUrl ?? null} />
+      <StoreHero store={menu.store} imageUrl={popular[0]?.imageUrl ?? null} />
       <CategoryNav sections={navSections} />
       <main className="mx-auto max-w-6xl px-4 sm:px-6">
         {popular.length > 0 && (

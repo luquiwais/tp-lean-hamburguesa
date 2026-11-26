@@ -2,13 +2,14 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { MAX_ITEM_QUANTITY, type Selection } from '@burger/shared';
 
-// El carrito guarda solo ids y cantidades; nombres y precios se derivan del
-// catálogo vigente (useCartSummary), así nunca muestra un precio viejo.
+// El carrito guarda solo ids, slug y cantidades; nombres y precios salen del
+// detalle vigente de cada producto (useCartSummary), así nunca muestra un precio viejo.
 // Persistido en localStorage para el invitado; la sync con la cuenta llega
 // con la auth (Fase 3/5).
 export type CartItem = {
   id: string;
   productId: string;
+  productSlug: string; // GET /api/products/:slug es por slug
   quantity: number;
   selections: Selection[];
   notes: string;
@@ -62,6 +63,11 @@ export const useCart = create<CartState>()(
       remove: (id) => set(({ items }) => ({ items: items.filter((i) => i.id !== id) })),
       clear: () => set({ items: [] }),
     }),
-    { name: 'burger-cart', version: 1 },
+    {
+      name: 'burger-cart',
+      version: 2,
+      // v1 no tenía productSlug (y eran datos de mocks): se arranca vacío.
+      migrate: () => ({ items: [] }) as unknown as CartState,
+    },
   ),
 );
